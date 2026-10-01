@@ -1,0 +1,85 @@
+name: Build Windows release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version of an existing draft release with Loquor-source-VERSION.zip
+        required: true
+        default: '0.2.0'
+permissions:
+  contents: write
+concurrency:
+  group: loquor-release
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Download the source snapshot from the draft release
+        shell: pwsh
+        run: |
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version.' }
+          gh release download "v$env:RELEASE_VERSION" --repo $env:RELEASE_REPOSITORY --pattern "Loquor-source-$env:RELEASE_VERSION.zip" --dir source
+          if ($LASTEXITCODE) { throw 'Source download failed.' }
+          Expand-Archive -LiteralPath "source/Loquor-source-$env:RELEASE_VERSION.zip" -DestinationPath app
+      - name: Install build dependencies
+        working-directory: app/Loquor-source
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-build.txt
+          if ($LASTEXITCODE) { throw 'Dependency installation failed.' }
+          $actual = python -c "import app_updates; print(app_updates.VERSION)"
+          if ($actual -ne $env:RELEASE_VERSION) { throw 'Source version differs from release.' }
+      - name: Run source tests
+        working-directory: app/Loquor-source
+        shell: pwsh
+        run: |
+          python tests/test_core.py
+          if ($LASTEXITCODE) { throw 'Core tests failed.' }
+          & ./tests/test_voice_install.ps1
+      - name: Build the standalone app
+        working-directory: app/Loquor-source
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm Loquor.spec
+          if ($LASTEXITCODE) { throw 'Standalone build failed.' }
+          $report = Join-Path (Get-Location) 'bundle-test.json'
+          Start-Process -FilePath (Resolve-Path 'dist/Loquor/Loquor.exe') -ArgumentList '--self-test',("`"" + $report + "`"") -WindowStyle Hidden -Wait
+          $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+          $result | ConvertTo-Json
+          if (!$result.ok) { throw 'Bundled runtime test failed.' }
+      - name: Build the installer and archives
+        working-directory: app/Loquor-source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path build-tools -Force | Out-Null
+          gh release download is-7_1_0 --repo jrsoftware/issrc --pattern innosetup-7.1.0-x64.exe --dir build-tools
+          if ($LASTEXITCODE) { throw 'Compiler download failed.' }
+          $signature = Get-AuthenticodeSignature build-tools/innosetup-7.1.0-x64.exe
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys') { throw 'Untrusted compiler.' }
+          $compilerFolder = Join-Path $env:RUNNER_TEMP 'Loquor-Inno'
+          Start-Process -FilePath (Resolve-Path build-tools/innosetup-7.1.0-x64.exe) -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER',("/DIR=`"" + $compilerFolder + "`"") -WindowStyle Hidden -Wait
+          & (Join-Path $compilerFolder 'ISCC.exe') "/DAppVersion=$env:RELEASE_VERSION" Loquor.iss
+          if ($LASTEXITCODE) { throw 'Installer build failed.' }
+          Remove-Item -LiteralPath bundle-test.json
+          # Create the portable binary and checksums. Keep the original uploaded source snapshot.
+          python package_release.py
+          if ($LASTEXITCODE) { throw 'Archive creation failed.' }
+          Copy-Item -LiteralPath "../../source/Loquor-source-$env:RELEASE_VERSION.zip" -Destination "release/Loquor-source-$env:RELEASE_VERSION.zip" -Force
+          python -c "from pathlib import Path; import hashlib; p=Path('release'); lines=[]; [(lines.append(hashlib.file_digest(f.open('rb'),'sha256').hexdigest()+'  '+f.name)) for f in sorted(p.iterdir()) if f.suffix in ['.exe','.zip']]; (p/'SHA256SUMS.txt').write_text('\n'.join(lines)+'\n',encoding='utf-8')"
+      - name: Publish the tested release
+        working-directory: app/Loquor-source
+        shell: pwsh
+        run: |
+          gh release upload "v$env:RELEASE_VERSION" "release/LoquorSetup-$env:RELEASE_VERSION.exe" "release/Loquor-Windows-x64-$env:RELEASE_VERSION.zip" release/SHA256SUMS.txt --repo $env:RELEASE_REPOSITORY --clobber
+          if ($LASTEXITCODE) { throw 'Release upload failed.' }
+          gh release edit "v$env:RELEASE_VERSION" --repo $env:RELEASE_REPOSITORY --draft=false --latest --title "Loquor $env:RELEASE_VERSION" --notes-file release-notes.md
+          if ($LASTEXITCODE) { throw 'Release publication failed.' }
