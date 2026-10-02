@@ -1,41 +1,59 @@
 # Loquor
 
-Turn academic readings into clear listening text, optional exam revision, and MP3s from one Windows desktop screen.
+Turn academic readings into listening text, optional exam revision, and MP3s from one Windows desktop screen.
 
 ## Run on Windows
 
-Download **LoquorSetup-0.2.0.exe** from [public releases](https://github.com/lukasslunecko-bit/Loquor-Releases/releases/latest) and install it. Python and libraries are included. Alternatively extract the entire Windows ZIP and open `Loquor.exe`; keep its `_internal` folder beside it. Windows 10/11, 64-bit x86. The installer does not require administrator rights. It is currently unsigned.
+Download **LoquorSetup-0.3.0.exe** from [public releases](https://github.com/lukasslunecko-bit/Loquor-Releases/releases/latest). Python, libraries, the MP3 encoder and the Kokoro offline model are included. Alternatively extract the entire Windows ZIP and open `Loquor.exe`; keep its `_internal` folder beside it. Windows 10/11, x64. Installation needs no administrator rights. The installer is currently unsigned. The offline model makes this download substantially larger than earlier releases.
 
 1. Add PDF, DOCX, TXT or Markdown files. PDFs need readable text or an existing OCR layer.
-2. Set cleanup options, output folder, speech provider, voice and speed on the main screen. Preview the selected voice with your own sample.
-3. With a signed-in Codex CLI available, **Use Codex automatically** is selected by default. This improves the complete reading after local extraction. It uses your ChatGPT/Codex allowance and does not require an API key. Codex itself is not bundled.
+2. Choose the output folder, narration engine, voice and speed on the main screen. Preview the voice with an editable sample. Less frequent choices live under **Settings**.
+3. **Use Codex automatically** improves the complete reading after local extraction when a signed-in Codex CLI is available. It uses your ChatGPT/Codex allowance, not an API key. Codex itself is not bundled.
 4. Choose **Prepare reading** to review the text, or **Prepare + MP3** to continue into narration.
-5. Without Codex, use **Copy prompt + reading**, or the saved `*_chatbot_request.txt`, in your preferred chatbot. Import its complete response and convert that text to MP3. Opening a chatbot never submits text automatically.
+5. Without Codex, use **Copy prompt + reading**, or the saved `*_chatbot_request.txt`, in your preferred chatbot. Import its complete response and convert it to MP3. Opening a chatbot does not submit text automatically.
 
-Local cleanup runs without a generative model or network calls. It removes selected headers, page numbers, footnotes, tables, captions, references and links, joins wrapped text, and conservatively preserves substantive content. Review the result and removal report: unusual layouts, poor OCR, complex phonetics and formulas can still need correction. Image-only PDFs need OCR beforehand. Embedded document instructions are treated as source data.
+Local cleanup uses no generative model or network calls. It removes selected headers, page numbers, footnotes, tables, captions, references and links, joins wrapped text, and conservatively preserves substantive content. Review the result and removal report: unusual layouts, poor OCR, complex phonetics and formulas can still need correction. Image-only PDFs need OCR beforehand. Embedded document instructions are treated as source data.
 
-## Speech and voices
+## Narration
 
-**Installed Windows voices** keeps narration text local. Compatible SAPI and Windows speech voices are listed; Narrator-only natural voices may not be available. **Microsoft online** uses edge-tts and sends narration text to Microsoft's service. Sonia is the default British female online voice; Susan/Hazel are preferred locally when installed. The unofficial online service may change or be unavailable; local mode never silently falls back to online.
+**Gemini online** is the preferred engine, with Aoede and instructions for clear British English delivery. Reading speed defaults to **1.15×**, revision to **1.00×**. **Set up Google** opens a guided window with a direct API-key link, masked entry and a connection test. For free-only use, create a Google AI Studio key for a project without paid billing. Google controls eligibility and quotas; Loquor does not enable billing, and a key for a paid project can incur charges. Connection testing sends one short neutral sentence. The current model is `gemini-3.8-flash-tts`.
 
-**Install EN voices** installs all standard English TTS language capabilities available on the current Windows installation, with their basic-language dependencies. It requires internet, Windows administrator approval, and sometimes a restart. It does not install Narrator natural voices or change the display language. Cancelled or failed voice installation should be handled through Windows Settings. Preview is available for both online and installed voices.
+**Kokoro offline** runs entirely on your CPU without an account or key. Emma and Isabella are included; Emma is the default. Both reading and revision default to **1.00×**. Rendering can take longer than the finished recording on ordinary laptops. Select Kokoro directly to narrate without sending text to a speech service.
+
+**Microsoft Edge online** and **installed Windows voices offline** remain available. Edge uses the unofficial edge-tts service, with Sonia as the British English default. Compatible SAPI/Windows speech voices appear in local mode; Narrator-only natural voices may not be accessible. Under narration Settings, **Windows voice packs** installs standard English speech capabilities and their language dependencies. This optional operation needs internet, Windows administrator approval and sometimes a restart; it does not install Narrator natural voices or change the display language.
+
+Speech speed is adjusted with pitch-preserving audio processing after synthesis. Separate reading/revision presets are stored per engine. Changing the main-screen speed updates the current preset. Automatically queued readings and revision batches use their corresponding presets. For manually added files, choose **Use for** before converting. Quiz markers such as `[[PAUSE:15]]` become fifteen seconds of actual silence, independently of speech speed.
+
+## Google blocks, interruptions and resumable jobs
+
+Loquor distinguishes a response mentioning possible copyright similarity from an unspecified policy block. It displays Google's explanation when available; an ambiguous refusal is not labelled as proven copyright infringement.
+
+The default for a copyright/policy block is to **switch the whole document to Kokoro**, keeping one narrator throughout. Narration Settings also offers **Kokoro only for blocked sections** or **Ask each time**. Section fallback can mix narrators and uses each engine's speed preset. These choices apply to Google's content blocks; quota, access and connection errors preserve progress and pause after bounded retries. You can resume later or choose Kokoro yourself.
+
+Audio is generated in short sections and cached under `.loquor-jobs` inside your MP3 folder. **Convert / Resume** reuses completed sections when the text and settings match. Keep this folder to retain progress; deleting it removes the cache, not your finished MP3s. Changing text or settings starts a separate job. Google-blocked sections are recorded so resuming does not repeatedly submit the same failed passage. A final MP3 is assembled only when all required sections have succeeded and the assembled file decodes. This catches technical failures and obviously truncated audio; it is not a word-by-word transcription check.
+
+**Condense for study** creates a separate, explicitly shortened learner-focused adaptation. Copy a prompt plus the text for any chatbot, or generate it using your signed-in Codex CLI. The original stays intact, and you review the new text before narrating it. Condensation is never an automatic response to a refusal, and Gemini may still decline an adaptation.
 
 ## Saved files and revision
 
-Each document has its own numbered output folder, normally in Documents/Loquor. The original document is preserved. Local listening text, a single prompt-plus-reading TXT, optional revision request and a detailed cleanup report are saved. Imported or Codex-improved text is saved separately. Repeated preparation and audio conversion use numbered filenames.
+Each prepared document has its own numbered output folder, normally in Documents/Loquor. The original is preserved. Listening text, a single prompt-plus-reading TXT, optional revision request and a detailed cleanup report are saved. Imported or Codex-improved text is saved separately. Repeated preparation and finished audio use numbered filenames.
 
-Optional exam revision produces a summary and a complete quiz: question, thinking pause, exemplar answer, repeated question. `[[PAUSE:15]]` on its own line becomes 15 seconds of actual silence. These markers are specific to Loquor. Review generated material; practice questions do not predict the real exam.
+Optional exam revision produces a summary and a complete quiz: question, silent thinking time, exemplar answer, repeated question. Pause markers are specific to Loquor. Review generated material; practice questions do not predict the actual exam.
 
 ## Updates and privacy
 
-Loquor checks the public release repository at startup unless disabled. This check sends no documents. It notifies you when a newer stable version is available. **Download and install** is user initiated, verifies GitHub's SHA-256 digest and starts the installer. Offline checks can be retried manually. Settings persist in LocalAppData/Loquor; documents and audio remain in your output folder during upgrades/uninstall.
+Loquor checks the public release repository at startup unless disabled. This check sends no documents. A newer stable version is announced in the app. **Download and install** is user initiated, verifies GitHub's SHA-256 digest and starts the installer. Offline checks can be retried manually. Documents and audio stay in your output folder during upgrades/uninstall.
 
-Codex cleanup/revision sends source text to OpenAI only when enabled/requested. Online narration sends text to Microsoft. Local extraction and local speech stay on your computer. No sign-in credentials, personal readings or generated audio are distributed with this application.
+Settings persist in LocalAppData/Loquor. Google keys are protected using Windows per-user DPAPI in a separate file, never in settings JSON, job metadata, prompts or the installer. Removing the key is available in Google setup. Someone running code as the same Windows user can still access that user's protected credentials.
+
+Enabled Codex cleanup/revision/condensation sends source text to OpenAI. Gemini narration sends text to Google; Edge sends it to Microsoft. Local extraction, Kokoro and installed Windows speech stay on your computer. Reading text and generated audio in your job cache are not encrypted. No account credentials, personal readings or generated audio are distributed with the application.
 
 ## Source and builds
 
-Source snapshots are provided alongside each public binary release even though the development Git repository is private. Loquor is licensed under GNU AGPL version 3 or later; see LICENSE and third-party notices. Classmates can use the installer without using the source.
+Optional source snapshots accompany public binary releases; the development Git repository is private. Loquor is GNU AGPL version 3 or later; see LICENSE and third-party notices. Classmates need only the installer.
 
-For development, install Python 3.14 with tkinter, create a virtual environment, and run `python -m pip install -r requirements-build.txt`, then `python Loquor.pyw`. To build, use `Build_Release.ps1 -Compiler C:\path\to\ISCC.exe` with Inno Setup 7.1.0. `Publish_Release.ps1` publishes prepared artifacts using your existing GitHub CLI login. No secrets belong in this repository. Source packages and upstream build links are described in THIRD_PARTY_NOTICES.md and DEPENDENCIES.json.
+For development, install Python 3.14 with tkinter, create a virtual environment, run `python -m pip install -r requirements-build.txt`, then `python fetch_kokoro.py` and `python Loquor.pyw`. The build-time model download is pinned to a verified SHA-256 hash; end users receive it already bundled. Run `python -m unittest discover -s tests -v` for the source checks. Build using `Build_Release.ps1 -Compiler C:\path\to\ISCC.exe` with Inno Setup 7.1.0. `python package_release.py --source-only` creates a source snapshot without model binaries, build outputs or secrets.
 
-Release tests cover all three original academic references locally (excluded from the repository), text handoff/import, one-screen controls, local English voice synthesis, online Sonia synthesis, cancellation, real silent quiz pauses, and a bundled-runtime smoke test. Full-length AI rewrites still deserve editorial review. A clean Windows virtual machine has not been tested.
+The public Windows build workflow downloads that snapshot and the pinned model, runs source and voice-installation tests, builds the standalone app, runs a real bundled offline synthesis/MP3 test, then publishes the installer and portable package with checksums. Third-party source/build links are in THIRD_PARTY_NOTICES.md and DEPENDENCIES.json.
+
+Validation includes the three original academic references in earlier extraction tests; Emma/Isabella auditions on the original two speech samples; current fallback, cancellation/resume and pause tests; actual offline MP3 synthesis, voice preview, Windows key protection and UI preference checks. Gemini success and copyright-block response shapes were observed in earlier API trials. A clean Windows virtual machine has not been tested. Full-length AI adaptations still deserve editorial review.

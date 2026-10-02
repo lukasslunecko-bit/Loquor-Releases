@@ -5,7 +5,7 @@ on:
       version:
         description: Version of an existing draft release with Loquor-source-VERSION.zip
         required: true
-        default: '0.2.0'
+        default: '0.3.0'
 permissions:
   contents: write
 concurrency:
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_VERSION: ${{ inputs.version }}
@@ -42,9 +42,15 @@ jobs:
         working-directory: app/Loquor-source
         shell: pwsh
         run: |
-          python tests/test_core.py
-          if ($LASTEXITCODE) { throw 'Core tests failed.' }
+          python -m unittest discover -s tests -v
+          if ($LASTEXITCODE) { throw 'Source tests failed.' }
           & ./tests/test_voice_install.ps1
+      - name: Download and verify the bundled offline model
+        working-directory: app/Loquor-source
+        shell: pwsh
+        run: |
+          python fetch_kokoro.py
+          if ($LASTEXITCODE) { throw 'Offline model acquisition failed.' }
       - name: Build the standalone app
         working-directory: app/Loquor-source
         shell: pwsh
