@@ -6,6 +6,10 @@ Connections and separate defaults; visible quiz choices/separate Gemini planning
 
 The signed-in Codex and offline Kokoro route has an actual end-to-end check. Optional text API and OpenAI speech adapters have mocked transport checks, not live account validation. Claude Code should remain experimental until it is tested with a user's own subscribed account. APIs and subscriptions are separate; no paid automatic fallback is planned.
 
+## Local PDF recognition: 0.6.0
+
+Automatic/forced local OCR, contrast/rotation/deskew, bundled language data, raw-text/searchable-PDF intermediates, per-page resumption and advisory quality warnings. Edge Sonia becomes the default with whole-recording offline Kokoro fallback. Severe blur, curved pages, handwriting and sophisticated table/column validation still need broader testing or additional tools.
+
 ## Following implementation and validation
 
 - Audition OpenAI Marin/Cedar with explicit API-billing opt-in; compare pronunciation, consistency and joins using the same reference passages.

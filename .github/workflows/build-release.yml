@@ -5,7 +5,7 @@ on:
       version:
         description: Version of an existing draft release with Loquor-source-VERSION.zip
         required: true
-        default: '0.5.0'
+        default: '0.6.0'
 permissions:
   contents: write
 concurrency:
@@ -38,6 +38,12 @@ jobs:
           if ($LASTEXITCODE) { throw 'Dependency installation failed.' }
           $actual = python -c "import app_updates; print(app_updates.VERSION)"
           if ($actual -ne $env:RELEASE_VERSION) { throw 'Source version differs from release.' }
+      - name: Acquire and verify local OCR language data
+        working-directory: app/Loquor-source
+        shell: pwsh
+        run: |
+          python fetch_ocr.py
+          if ($LASTEXITCODE) { throw 'OCR language data acquisition failed.' }
       - name: Run source tests
         working-directory: app/Loquor-source
         shell: pwsh
